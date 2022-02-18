@@ -1,6 +1,7 @@
 #include <Rcpp.h>
 #include "stdint.h"
 #include "stdlib.h"
+
 #include "./../../PtDAlgorithms/api/c/ptdalgorithms.h"
 #include "./../../PtDAlgorithms/api/cpp/ptdalgorithmscpp.h"
 
@@ -73,7 +74,7 @@ IntegerVector rewards_at(SEXP phase_type_graph, int i, int j, int n1, int n2) {
 }
 
 // [[Rcpp::export]]
-SEXP construct_ancestral_graph(int n1, int n2) {
+SEXP construct_ancestral_graph(int n1, int n2, float pop_size) {
     const int matrix_size = (n1 > n2 ? n1 : n2) + 1;
     const int state_length = matrix_size * matrix_size * 2;
     const size_t state_size = sizeof(int) * state_length;
@@ -130,9 +131,9 @@ SEXP construct_ancestral_graph(int n1, int n2) {
                             if (entry1 == 1) {
                                 continue;
                             }
-                            weight = entry1 * (entry1 - 1) / 2;
+                            weight = entry1 * (entry1 - 1) / 2 / pop_size;
                         } else {
-                            weight = entry1 * entry2;
+                            weight = entry1 * entry2 / pop_size;
                         }
 
                         memcpy(child_state, state, state_size);
@@ -156,7 +157,7 @@ SEXP construct_ancestral_graph(int n1, int n2) {
 }
 
 // [[Rcpp::export]]
-SEXP construct_im_graph(int n1, int n2, float m12, float m21) {
+SEXP construct_im_graph(int n1, int n2, float p1_size, float p2_size, float m12, float m21) {
     const int matrix_size = (n1 > n2 ? n1 : n2) + 1;
     const int state_length = matrix_size * matrix_size * 2;
     const size_t state_size = sizeof(int) * state_length;
@@ -213,6 +214,13 @@ SEXP construct_im_graph(int n1, int n2, float m12, float m21) {
         }
 
         for (int population = 0; population <= 1; population++) {
+            float pop_size;
+            if (population == 0) {
+                pop_size = p1_size;
+            }
+            else {
+                pop_size = p2_size;
+            }
             for (int i = 0; i < matrix_size; ++i) {
                 for (int j = 0; j < matrix_size; ++j) {
                     int index1 = get_matrix_index(i, j, population, matrix_size);
@@ -235,9 +243,9 @@ SEXP construct_im_graph(int n1, int n2, float m12, float m21) {
                                 if (entry1 == 1) {
                                     continue;
                                 }
-                                weight = entry1 * (entry1 - 1) / 2;
+                                weight = entry1 * (entry1 - 1) / 2 / pop_size;
                             } else {
-                                weight = entry1 * entry2;
+                                weight = entry1 * entry2 / pop_size;
                             }
 
                             memcpy(child_state, state, state_size);
