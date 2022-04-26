@@ -89,7 +89,11 @@ int props_to_index(int s, int a, int b, int p)  {
  * @return Graph.
  */
 // [[Rcpp::export]]
-SEXP construct_twolocus_island_graph(int sample_size, double N, double M, double R) {
+SEXP construct_twolocus_island_graph(int sample_size, 
+                                     double N1, double N2, 
+                                     double M1, double M2, 
+                                     double R) {
+// SEXP construct_twolocus_island_graph(int sample_size, double N, double M, double R, bool keep_null_edges=false) {
     
      // number of populations
     const int nr_populations = 2; // needs to be 2
@@ -146,12 +150,20 @@ SEXP construct_twolocus_island_graph(int sample_size, double N, double M, double
                     if (state[i] < 2) {
                       continue;
                     }
-                    rate = state[i] * (state[i] - 1) / 2 / N;
+                    if (props_i.population == 1) {
+                        rate = state[i] * (state[i] - 1) / 2 / N1;
+                    } else {
+                        rate = state[i] * (state[i] - 1) / 2 / N2;
+                    }
                 } else {
                     if (state[i] < 1 || state[j] < 1) {
                       continue;
                     }
-                    rate = state[i] * state[j] / N;
+                    if (props_i.population == 1) {
+                        rate = state[i] * state[j] / N1;
+                    } else {
+                        rate = state[i] * state[j] / N2;
+                    }
                 }
          
                 memcpy(child_state, state, state_size);
@@ -167,10 +179,44 @@ SEXP construct_twolocus_island_graph(int sample_size, double N, double M, double
                 struct ptd_vertex *child_vertex = ptd_find_or_create_vertex(
                                 graph, avl_tree, child_state
                        );
-                ptd_graph_add_edge(vertex, child_vertex, rate);                         
+                ptd_graph_add_edge(vertex, child_vertex, rate); 
+                // double *edge_state = (double *) calloc((size_t) 3, sizeof(double));
+                // edge_state[0] = rate;                
+                // ptd_graph_add_edge_parameterized(vertex, child_vertex, rate, edge_state);                        
             }
+            // migration
+            // if (state[i] > 0 && (M > 0 || keep_null_edges)) { // M > 0 to not make zero nonsensical zero weight edges (disable if parameterized)
+            if (state[i] > 0 && (M1 > 0 || M2 > 0)) { // M > 0 to not make zero nonsensical zero weight edges (disable if parameterized)
+      
+                double rate;
+                memcpy(child_state, state, state_size);
+
+                int m;
+                if (props_i.population == 1) {
+                    m = 2;
+                    rate = state[i] * M1;
+                } else {
+                    m = 1;
+                    rate = state[i] * M2;
+                }
+
+                int k = _props_to_index(sample_size, props_i.locus1, props_i.locus2, m);
+                child_state[i] = child_state[i] - 1;
+                child_state[k] = child_state[k] + 1;
+
+                struct ptd_vertex *child_vertex = ptd_find_or_create_vertex(
+                                graph, avl_tree, child_state
+                       );
+                ptd_graph_add_edge(vertex, child_vertex, rate); 
+                // double *edge_state = (double *) calloc((size_t) 3, sizeof(double));
+                // edge_state[1] = rate;                
+                // ptd_graph_add_edge_parameterized(vertex, child_vertex, rate, edge_state);  
+            }  
             // recombination
-            if (state[i] > 0 && props_i.locus1 > 0 && props_i.locus2 > 0) {
+            // if (state[i] > 0 && props_i.locus1 > 0 && props_i.locus2 > 0 && (R > 0 || keep_null_edges)) { // R > 0 to not make zero nonsensical zero weight edges (disable if parameterized)
+            if (state[i] > 0 && props_i.locus1 > 0 && props_i.locus2 > 0 && R > 0) { // R > 0 to not make zero nonsensical zero weight edges (disable if parameterized)
+
+
       
                 double rate = R;
                 memcpy(child_state, state, state_size);
@@ -182,33 +228,21 @@ SEXP construct_twolocus_island_graph(int sample_size, double N, double M, double
                 child_state[k] = child_state[k] + 1;
                 child_state[l] = child_state[l] + 1;
 
+                // checks:
+                properties props_k = _index_to_props(sample_size, k);
+                properties props_l = _index_to_props(sample_size, l);                
+                assert(props_k.locus1 + props_l.locus1 == props_i.locus1);
+                assert(props_k.locus2 + props_l.locus2 == props_i.locus2);
+
+                
                 struct ptd_vertex *child_vertex = ptd_find_or_create_vertex(
                                 graph, avl_tree, child_state
                        );
                 ptd_graph_add_edge(vertex, child_vertex, rate); 
-            }   
-            // migration
-            if (state[i] > 0) {
-      
-                double rate = M;
-                memcpy(child_state, state, state_size);
-
-                int m;
-                if (props_i.population == 1) {
-                    m = 2;
-                } else {
-                    m = 1;
-                }
-
-                int k = _props_to_index(sample_size, props_i.locus1, props_i.locus2, m);
-                child_state[i] = child_state[i] - 1;
-                child_state[k] = child_state[k] + 1;
-
-                struct ptd_vertex *child_vertex = ptd_find_or_create_vertex(
-                                graph, avl_tree, child_state
-                       );
-                ptd_graph_add_edge(vertex, child_vertex, rate); 
-            }            
+                // double *edge_state = (double *) calloc((size_t) 3, sizeof(double));
+                // edge_state[2] = rate;                
+                // ptd_graph_add_edge_parameterized(vertex, child_vertex, rate, edge_state);             
+            }             
         }
     }
     free(child_state);
