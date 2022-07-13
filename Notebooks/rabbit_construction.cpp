@@ -24,6 +24,10 @@
 #include "stdint.h"
 #include "stdlib.h"
 
+using namespace std;
+using namespace ptdalgorithms;
+using namespace Rcpp;
+
 // [[Rcpp::export]]
 SEXP construct_rabbit_graph(int starting_rabbits, float flooding_left, float flooding_right) {
     /* Same state size (left_rabbits, right_rabbits) */
@@ -126,4 +130,17 @@ SEXP construct_rabbit_graph(int starting_rabbits, float flooding_left, float flo
     return Rcpp::XPtr<ptdalgorithms::Graph>(
             result
     );
+}
+
+// [[Rcpp::export]]
+int number_of_edges(SEXP phase_type_graph) {
+  Rcpp::XPtr<Graph> graphcpp(phase_type_graph);
+  ptd_graph *graph = graphcpp->c_graph();
+  int nedges = 0;
+  
+  for (size_t k = 0; k < graph->vertices_length; ++k) {
+    nedges += graph->vertices[k]->edges_length;
+  }
+  
+  return nedges;
 }

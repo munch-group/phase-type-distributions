@@ -1,0 +1,24 @@
+name: phasetype
+channels:
+  - defaults
+  - conda-forge
+  - kaspermunch
+  - bioconda
+  - r
+dependencies:
+  - r-essentials
+  - pandas
+  - r-devtools
+  - graphviz
+  - r-rcpp
+  - jupyterlab
+  - python-graphviz
+  - rpy2
+  - python=3
+  - pytables
+  - seaborn
+  - r-deoptim
+  - r-foreach
+  - gsl
+  - r-rcppgsl
+prefix: /Users/kmt/miniconda3/envs/phasetype
