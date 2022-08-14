@@ -1,10 +1,16 @@
 %%R -o units -o label -o expectation_max_construction_values_for_matrix -o moments100_max_construction_values_for_matrix -o cdf100_max_construction_values_for_matrix
+construction_fun_R <- function(x) {
+    return(construct_rabbit_graph_R(x, 2, 4))
+}
 construction_fun <- function(x) {
     return(construct_rabbit_graph(x, 2, 4))
 }
 units <- "rabbits"
 label <- "rabbits"
-expectation_construction_values <- c(10, 20, 30, 40)#, 50, 60, 70, 80, 90, 100, 150, 200, 250, 300, 400, 500)
+construction_values <- seq(50, 1000, 50)
+max_construction_values_for_R = 500
+max_construction_values_for_matrix = 150
+expectation_construction_values <- c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200, 250, 300, 400, 500)
 expectation_max_construction_values_for_matrix <- 100
 moments100_construction_values <- c(10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 150, 200, 250, 300, 400, 500)
 moments100_max_construction_values_for_matrix <- 100

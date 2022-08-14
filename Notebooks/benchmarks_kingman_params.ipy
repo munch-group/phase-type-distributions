@@ -1,4 +1,9 @@
+%load_ext rpy2.ipython
+
 %%R -o units -o label -o expectation_max_construction_values_for_matrix -o moments100_max_construction_values_for_matrix -o cdf100_max_construction_values_for_matrix
+construct_kingman_graph_R <- function(x) {
+    return(generate_kingman_graph_R(x, x))
+}
 construction_fun <- function(x) {
     return(generate_kingman_graph(x, x))
 }
