@@ -1,17 +1,18 @@
-%load_ext rpy2.ipython
-
 %%R -o units -o label -o expectation_max_construction_values_for_matrix -o moments100_max_construction_values_for_matrix -o cdf100_max_construction_values_for_matrix
-construct_kingman_graph_R <- function(x) {
-    return(generate_kingman_graph_R(x, x))
+construction_fun_R <- function(x) {
+    return(generate_kingman_graph_R(x))
 }
 construction_fun <- function(x) {
     return(generate_kingman_graph(x, x))
 }
 units <- "samples"
 label <- "coalescent"
-expectation_construction_values <- seq(4, 60, 2)
-expectation_max_construction_values_for_matrix <- 30
-moments100_construction_values <- seq(4, 40, 2)
+construction_values <- seq(4, 48, 2)
+max_construction_values_for_R <- 32
+max_construction_values_for_matrix <- 30
+expectation_construction_values <- seq(4, 36, 2)
+expectation_max_construction_values_for_matrix <- 24
+moments100_construction_values <- seq(4, 38, 2)
 moments100_max_construction_values_for_matrix <- 20
-cdf100_construction_values <- seq(4, 40, 2)
-cdf100_max_construction_values_for_matrix <- 22
+cdf100_construction_values <- seq(4, 30, 2)
+cdf100_max_construction_values_for_matrix <- 18
