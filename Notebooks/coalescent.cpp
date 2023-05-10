@@ -177,14 +177,14 @@ SEXP construct_coalescent_selection_graph(int sample_size, int n_derived, int po
        fprintf(stderr, "bin %d\n", bin_center);
     }
     
-    int *bins = (int *) calloc((size_t)(n_freqbins+2), sizeof(int));
-    bins[i] = 0
-    for (int i = 1; i < n_freqbins+1; ++i) {
-       int bin_center = (int)round(pop_size*((i+1)/((double)n_freqbins) - 1/(double)(n_freqbins)/2)) ;
-       bins[i] = bin_center;
-       fprintf(stderr, "bin %d\n", bin_center);
-    }
-    bins[n_freqbins+1] = 0
+    // int *bins = (int *) calloc((size_t)(n_freqbins+2), sizeof(int));
+    // bins[i] = 0
+    // for (int i = 1; i < n_freqbins+1; ++i) {
+    //    int bin_center = (int)round(pop_size*((i+1)/((double)n_freqbins) - 1/(double)(n_freqbins)/2)) ;
+    //    bins[i] = bin_center;
+    //    fprintf(stderr, "bin %d\n", bin_center);
+    // }
+    // bins[n_freqbins+1] = 0;
     
     // int *frequencies = (int *) calloc((size_t)(n_freqbins+2), sizeof(int));
     // for (int i = 0; i < n_freqbins; ++i) {
