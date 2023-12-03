@@ -94,6 +94,13 @@ int cmpfun (const void * a, const void * b) {
    return ( *(double*)a - *(double*)b );
 }
 
+/**
+ * Numerically stable summation
+ *
+ * @param x Vector to sort.
+ * @param n Vector length
+ * @return Sum.
+ */
 float kahan_sum(double x[], int n) {
     qsort(x, n, sizeof(double), cmpfun);
     double s = x[0];
@@ -107,6 +114,106 @@ float kahan_sum(double x[], int n) {
     return s;
 }
 
+void multiply_matrix(double **mat1, double **mat2, double **result, int dim) {
+    for (int i = 0; i < dim; ++i) {
+        for (int j = 0; j < dim; ++j) {
+            result[i][j] = 0;
+            for (int k = 0; k < dim; ++k) {
+                result[i][j] += mat1[i][k] * mat2[k][j];
+            }
+        }
+    }
+}
+
+// Function to raise a matrix to a power
+void power_matrix(double **mat, double **result, int dim, int power) {
+    // Initialize result matrix as the identity matrix
+    for (int i = 0; i < dim; ++i) {
+        for (int j = 0; j < dim; ++j) {
+            result[i][j] = (i == j) ? 1 : 0;
+        }
+    }
+
+    double **temp;
+    temp = (double **) malloc(sizeof(double*) * dim);
+    for(int i = 0; i < dim; i++) {
+        temp[i] = (double *) malloc(sizeof(double*) * dim);
+    }  
+    
+    // Multiply mat by itself 'power' times
+    for (int i = 0; i < power; ++i) {      
+        multiply_matrix(result, mat, temp, dim);
+        // Copy the result back to the result matrix
+        for (int j = 0; j < dim; ++j) {
+            for (int k = 0; k < dim; ++k) {
+                result[j][k] = temp[j][k];
+            }
+        }        
+    }
+}
+
+// typedef struct {
+//     int num;
+//     int index;
+// } Number;
+
+// int compare(const void* a, const void* b) {
+//     return ((Number*)a)->num - ((Number*)b)->num;
+// }
+
+// int* twoSum(int* nums, int numsSize, int target, int* returnSize) {
+//     Number numbers[numsSize];
+//     for(int i = 0; i < numsSize; i++) {
+//         numbers[i].num = nums[i];
+//         numbers[i].index = i;
+//     }
+//     qsort(numbers, numsSize, sizeof(Number), compare);
+
+//     int left = 0, right = numsSize - 1;
+//     while(left < right) {
+//         int sum = numbers[left].num + numbers[right].num;
+//         if(sum == target) {
+//             *returnSize = 2;
+//             int* result = (int*)malloc(*returnSize * sizeof(int));
+//             result[0] = numbers[left].index;
+//             result[1] = numbers[right].index;
+//             return result;
+//         } else if(sum < target) {
+//             left++;
+//         } else {
+//             right--;
+//         }
+//     }
+//     *returnSize = 0;
+//     return NULL;
+// }
+
+// faster alternative with Fast2Sum....
+// function KahanSum2(input)
+//     // Prepare the accumulator.
+//     var sum = 0.0
+//     // A running compensation for lost low-order bits.
+//     var c = 0.0
+//     // The array input has elements indexed 
+//     for i = 1 to input.length do
+//         // c is zero the first time around.
+//         var y = input[i] + c
+//         // sum + c is an approximation to the exact sum.
+//         (sum,c) = Fast2Sum(sum,y)
+//     // Next time around, the lost low part will be added to y in a fresh attempt.
+//     next i
+//     return sum
+    
+
+/**
+ * Constructs a transition matrix for discrete frequency bins.
+ *
+ * @param n Population size.
+ * @param bins Vector of binned frequencies.
+ * @param n_freqbins Nr. of binned frequencies.
+ * @param s Selection coeficient.
+ * @return matrix.
+ */
 double** trans_matrix(int n, int* bins, int n_freqbins, double s) {
     
     // mpf_t x, y;
@@ -129,31 +236,36 @@ double** trans_matrix(int n, int* bins, int n_freqbins, double s) {
             // double p = frequencies[i];
             double p = (double)bins[i] / n;
             p = p*(1+s)/(p*(1+s)+1-p);
-            m[i][j] = gsl_ran_binomial_pdf(x, p, n);
+            m[i][j] = gsl_ran_binomial_pdf(x, p, n) ;
             // fprintf(stderr, "%d %f %d %f\n", x, p, n, m[i][j]);
         }
     }
     
     for (int i=0; i < n_freqbins; i++) {
         double s = kahan_sum(m[i], n_freqbins);
-        // fprintf(stderr, "%e\n", s);
         for (int j=0; j < n_freqbins; j++) {
-          // fprintf(stderr, "val: %e sum:%e, %d\n", m[i][j], s, m[i][j] == s);
            m[i][j] /= s;
-           // fprintf(stderr, "norm: %e %d\n", m[i][j], m[i][j] == 1);
-
         }
     }
-    
+
+    // double **temp;
+    // temp = (double **) malloc(sizeof(double*) * n_freqbins);
+    // for(int i = 0; i < n_freqbins; i++) {
+    //     temp[i] = (double *) malloc(sizeof(double*) * n_freqbins);
+    // }      
+    // power_matrix(m, temp, n_freqbins, n);
+    // m = temp;
+
+
     // to get trans a -> b do: m[a][b]
     
-    // for (int i=0; i<n_freqbins; i++) {
-    //     for(int j=0; j<n_freqbins; j++) {
-    //          fprintf(stderr, "%e ", m[i][j]);
-    //     }
-    //     fprintf(stderr, "\n");
-    // }
-    // fprintf(stderr, "\n");
+    for (int i=0; i<n_freqbins; i++) {
+        for(int j=0; j<n_freqbins; j++) {
+             fprintf(stderr, "%e ", m[i][j]);
+        }
+        fprintf(stderr, "\n");
+    }
+    fprintf(stderr, "\n");
     
     return(m);
 }
@@ -176,7 +288,7 @@ SEXP construct_coalescent_selection_graph(int sample_size, int n_derived, int po
        bins[i] = bin_center;
        fprintf(stderr, "bin %d\n", bin_center);
     }
-    
+
     // int *bins = (int *) calloc((size_t)(n_freqbins+2), sizeof(int));
     // bins[i] = 0
     // for (int i = 1; i < n_freqbins+1; ++i) {
@@ -212,13 +324,21 @@ SEXP construct_coalescent_selection_graph(int sample_size, int n_derived, int po
     // find freq bin closest to derived freq in sample
     double* diffs = (double *) calloc((double)(n_freqbins), sizeof(double));
     // double* diffs = (double *) malloc(sizeof(double) * n_freqbins);
+
+    // /********/
+    // for (int i = 0; i < n_freqbins; i++) {  
+    //     diffs[i] = abs(bins[i]/((double)pop_size) - der_freq);
+    // }
+    // double diff_sum = kahan_sum(diffs, n_freqbins);        
+    // /********/
+    
     int start_bin = 0;
     for (int i = 0; i < n_freqbins; i++) {     
        if(abs(bins[i] - pop_size*der_freq) < abs(bins[start_bin] - pop_size*der_freq)) {    
            start_bin = i;
        }
-    }       
-
+    }      
+    
     // fprintf(stderr, "startbin: %d\n", start_freq_bin);
 
     double **freq_trans = trans_matrix(pop_size, bins, n_freqbins, sel_coef);
@@ -236,20 +356,38 @@ SEXP construct_coalescent_selection_graph(int sample_size, int n_derived, int po
         initial_state[_props_to_index(sample_size, 1, 0)] = sample_size - n_derived;
         initial_state[_props_to_index(sample_size, 1, 1)] = n_derived;
         initial_state[bin_index] = i;
+        
+        /********/
+        // double ipv_rate = 0;
+        
+        // for (int b = 0; b < n_freqbins; b++) {     
+        //     ipv_rate += (1-diffs[b]/diff_sum) * freq_trans[b][i];
+        // } 
+        /********/
 
+        // double ipv_rate;
+        // if (bins[start_bin1] == n_derived) {
+        //      ipv_rate = freq_trans[start_bin1][i];
+        // } else {
+        //     double d1 = abs(bins[start_bin1] - n_derived);
+        //     double d2 = abs(bins[start_bin2] - n_derived);
+        //     ipv_rate = d1/(d1+d2) * freq_trans[start_bin1][i] +  d2/(d1+d2) * freq_trans[start_bin2][i];
+        // }
+        
         double ipv_rate = freq_trans[start_bin][i];
 
-        // fprintf(stderr, "%f\n", ipv_rate);
-        
-//        if (abs(ipv_rate) > 1.0e-30) {
-            // fprintf(stderr, "ipv %f\n", ipv_rate);
 
-            ptd_graph_add_edge(
+        
+        // fprintf(stderr, "%f\n", ipv_rate);
+        // if (abs(ipv_rate) > 1.0e-30) {
+        //     fprintf(stderr, "ipv %f\n", ipv_rate);
+
+        ptd_graph_add_edge(
                     graph->starting_vertex,
                     ptd_find_or_create_vertex(graph, avl_tree, initial_state),
                     ipv_rate
             );
-//        }
+//      }
         
     }
     free(initial_state);
@@ -283,6 +421,7 @@ SEXP construct_coalescent_selection_graph(int sample_size, int n_derived, int po
         
         // loop over freqs other than cur_freq_bin 
         for (int freq_bin = 0; freq_bin < n_freqbins; freq_bin++) {
+
             if (freq_bin == cur_freq_bin) {
                 continue;   
             }
@@ -297,9 +436,18 @@ SEXP construct_coalescent_selection_graph(int sample_size, int n_derived, int po
             }
 
             double rate = freq_trans[cur_freq_bin][freq_bin];
-
+            
             rate *= pop_size; // to make it scale the same as N
 
+            // rate += 0.0001;
+
+            fprintf(stderr, "rate from bin %d to bin %d: %f\n", cur_freq_bin, freq_bin, rate);
+            fprintf(stderr, "%s", "state: ");
+            for (int i=0; i<state_length; i++)
+                fprintf(stderr, "%d", state[i]);
+            fprintf(stderr, "%s", "\n");
+
+            
             // if (abs(rate) < 1.0e-30) {
             //     continue;
             // }
