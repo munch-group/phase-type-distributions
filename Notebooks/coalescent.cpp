@@ -430,7 +430,7 @@ SEXP construct_coalescent_selection_graph(int sample_size, int n_derived, int po
                 // cannot loose ancestral allele while anc lineages remain
                 continue;
             }
-            if (d > 0 && freq_bin == 0) {
+            if (d > 1 && freq_bin == 0) {
                 // cannot loose derived allele while der lineages remain
                 continue;
             }
