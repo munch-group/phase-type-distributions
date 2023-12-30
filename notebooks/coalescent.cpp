@@ -16,6 +16,7 @@
 
 #include <RcppGSL.h>
 #include <gsl/gsl_randist.h>
+#include <gsl/gsl_cdf.h>
 
 #include <gmp.h>
 #include <gmpxx.h>
@@ -215,6 +216,9 @@ void power_matrix(double **mat, double **result, int dim, int power) {
  * @return matrix.
  */
 double** trans_matrix(int n, int* bins, int n_freqbins, double s) {
+
+
+    s *= -1; // flip sign of s because we are looking backwards in time...
     
     // mpf_t x, y;
     // mpf_init(x);     
@@ -270,6 +274,14 @@ double** trans_matrix(int n, int* bins, int n_freqbins, double s) {
     return(m);
 }
 
+double *linspace(double a, double b, int num) {
+    double *v = (double *) malloc(sizeof(double*) * num);
+    for (int i=0; i < num; i++) {
+          v[i] = a + i * (b - a) / (double (num-1));
+     }
+    return v;
+}
+
 
 /**
  * Constructs a state space for a Kingman coalescent.
@@ -281,14 +293,23 @@ double** trans_matrix(int n, int* bins, int n_freqbins, double s) {
 // [[Rcpp::export]]
 SEXP construct_coalescent_selection_graph(int sample_size, int n_derived, int pop_size, int n_freqbins, double sel_coef) {
      
-    // compute freqs for each bin as vector
-    int *bins = (int *) calloc((size_t)(n_freqbins+2), sizeof(int));
-    for (int i = 0; i < n_freqbins; ++i) {
-       int bin_center = (int)round(pop_size*((i+1)/((double)n_freqbins) - 1/(double)(n_freqbins)/2)) ;
-       bins[i] = bin_center;
-       fprintf(stderr, "bin %d\n", bin_center);
+    // // compute freqs for each bin as vector
+    // int *bins = (int *) calloc((size_t)(n_freqbins+2), sizeof(int));
+    // for (int i = 0; i < n_freqbins; ++i) {
+    //    int bin_center = (int)round(pop_size*((i+1)/((double)n_freqbins) - 1/(double)(n_freqbins)/2)) ;
+    //    bins[i] = bin_center;
+    //    fprintf(stderr, "bin %d\n", bin_center);
+    // }
+
+    double *bin_probs = linspace(10/((double) pop_size), 1-10/((double) pop_size), n_freqbins);
+    // int *bins = (int *) calloc((size_t)(n_freqbins), sizeof(int));
+    int *bins = (int *) malloc(sizeof(int) * n_freqbins);
+    for (int i=0; i < n_freqbins; i++) {
+        bins[i] = (int) round(gsl_cdf_beta_Pinv(bin_probs[i], 0.5, 0.5) * pop_size) ;
+        fprintf(stderr, "%e %d\n", bin_probs[i], bins[i]);
     }
 
+    
     // int *bins = (int *) calloc((size_t)(n_freqbins+2), sizeof(int));
     // bins[i] = 0
     // for (int i = 1; i < n_freqbins+1; ++i) {
@@ -338,6 +359,21 @@ SEXP construct_coalescent_selection_graph(int sample_size, int n_derived, int po
            start_bin = i;
        }
     }      
+
+        
+    double *ipv_rates = (double *) malloc(sizeof(double*) * n_freqbins);
+    for (int i=0; i < n_freqbins; i++) {
+        ipv_rates[i] = gsl_ran_beta_pdf(bins[i]/((double)pop_size), n_derived, sample_size - n_derived) ;
+    }
+    double ipv_sum = kahan_sum(ipv_rates, n_freqbins);
+    for (int i=0; i < n_freqbins; i++) {
+       ipv_rates[i] /= ipv_sum;
+    }        
+    fprintf(stderr, "ipv_rates: ");
+    for (int i=0; i<n_freqbins; i++)
+        fprintf(stderr, "%f ", ipv_rates[i]);
+    fprintf(stderr, "\n");
+
     
     // fprintf(stderr, "startbin: %d\n", start_freq_bin);
 
@@ -374,9 +410,8 @@ SEXP construct_coalescent_selection_graph(int sample_size, int n_derived, int po
         //     ipv_rate = d1/(d1+d2) * freq_trans[start_bin1][i] +  d2/(d1+d2) * freq_trans[start_bin2][i];
         // }
         
-        double ipv_rate = freq_trans[start_bin][i];
-
-
+        // double ipv_rate = freq_trans[start_bin][i];
+        double ipv_rate = ipv_rates[i];
         
         // fprintf(stderr, "%f\n", ipv_rate);
         // if (abs(ipv_rate) > 1.0e-30) {
@@ -441,12 +476,13 @@ SEXP construct_coalescent_selection_graph(int sample_size, int n_derived, int po
 
             // rate += 0.0001;
 
-            fprintf(stderr, "rate from bin %d to bin %d: %f\n", cur_freq_bin, freq_bin, rate);
-            fprintf(stderr, "%s", "state: ");
-            for (int i=0; i<state_length; i++)
-                fprintf(stderr, "%d", state[i]);
-            fprintf(stderr, "%s", "\n");
-
+            if (rate > 0) {
+                fprintf(stderr, "rate from bin %d to bin %d: %f\n", cur_freq_bin, freq_bin, rate);
+                fprintf(stderr, "%s", "state: ");
+                for (int i=0; i<state_length; i++)
+                    fprintf(stderr, "%d", state[i]);
+                fprintf(stderr, "%s", "\n");
+            }
             
             // if (abs(rate) < 1.0e-30) {
             //     continue;
