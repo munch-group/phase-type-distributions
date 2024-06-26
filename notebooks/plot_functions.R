@@ -13,6 +13,7 @@ despine <- theme(panel.border = element_blank(), panel.grid.major = element_blan
 
 plot_sfs <- function(graph, rewards) {
     sfs <- sapply(1:(dim(rewards)[1]-1), function(i) expectation(graph, rewards[i,]))
+    # sfs <- apply(rewards, 1, function(x) expectation(graph, x))                  
     data.frame(
       ton=seq(1,length(sfs)),  
       brlen=sfs
@@ -27,6 +28,18 @@ plot_sfs_dph <- function(graph, rewards, trunc=4) {
         x <- seq(from = 0, to = trunc, by = 0.01)
         pdf <- dph(x, reward_transform(graph, rewards[i, ]))
         df <- data.frame(probability = pdf, t=x, ton=i)
+        result <- rbind(result, df)
+    }
+    result %>% ggplot(aes(y=probability, x=t, group=ton, color=ton)) +
+        geom_line(linewidth=1) + scale_color_viridis() + despine
+}
+
+plot_sfs_pph <- function(graph, rewards, trunc=4) {
+    result = data.frame()
+    for (i in 1:(nrow(rewards)-1)) {
+        x <- seq(from = 0, to = trunc, by = 0.01)
+        cdf <- pph(x, reward_transform(graph, rewards[i, ]))
+        df <- data.frame(probability = cdf, t=x, ton=i)
         result <- rbind(result, df)
     }
     result %>% ggplot(aes(y=probability, x=t, group=ton, color=ton)) +
@@ -79,7 +92,11 @@ plot_cov_mat <- function(cov_mat) {
    
     df <- as.data.frame(cov_mat)
     df <- df %>% rownames_to_column('ton1') %>% gather('ton2', 'value', -c(ton1))
-    
+    df$ton1 <- as.character(df$ton1)
+    df$ton2 <- gsub("V","",as.character(df$ton2))
+    df$ton1 <- factor(df$ton1, levels=unique(df$ton1[order(as.numeric(df$ton1))]))
+    df$ton2 <- factor(df$ton2, levels=unique(df$ton2[order(as.numeric(df$ton2))]))
+        
     ggplot(df, aes(ton1, ton2)) +
         geom_tile(aes(fill = value)) + 
         scale_y_discrete(labels= seq(1, nrow(cov_mat))) + 
