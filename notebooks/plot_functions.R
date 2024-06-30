@@ -109,7 +109,7 @@ plot_cov_mat <- function(cov_mat) {
 plot_sim <- function(graph)
 {
     gam <- graph_as_matrix(graph)
-    mat <- gam$SIM
+    mat <- t(gam$SIM)
     mat <- matrix(as.integer(mat > 0), dim(mat))
     
     rownames(mat) <- 1:nrow(mat)
@@ -120,6 +120,7 @@ plot_sim <- function(graph)
     df$m <- as.numeric(df$m)
     ggplot(df, aes(n, m)) +
         geom_tile(aes(fill = value), show.legend = FALSE) + 
+        scale_y_reverse() +
         scale_fill_gradient(low="white", high="black") +
         theme_minimal() + 
         theme(panel.grid.major = element_blank(), 
