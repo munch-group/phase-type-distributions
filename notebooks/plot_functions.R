@@ -210,8 +210,12 @@ plot_graph <- function(gam, constrained=TRUE,
 
     absorb_rates <- -rowSums(gam$SIM)
     for (i in 1:nrow(gam$states)) {
-        if (absorb_rates[i] > 0) {
-            # edges <- c(edges, paste('"', from, '"', ' -> ', 'Absorb', '[constraint=true, label="', label, '",labelfloat=false]', ';', sep='')) 
+
+        # TODO: Avoid the hack below by changing the function to use the graph instead of the matrix
+        if (absorb_rates[i] > abs(1e-14)) {
+        # if (absorb_rates[i] > 0) {
+        
+        # edges <- c(edges, paste('"', from, '"', ' -> ', 'Absorb', '[constraint=true, label="', label, '",labelfloat=false]', ';', sep='')) 
             edge <- edge_templ
             edge <- sub('FROM', paste(gam$states[i,], collapse = ","), edge)
             edge <- sub('TO', absorbing_name, edge)

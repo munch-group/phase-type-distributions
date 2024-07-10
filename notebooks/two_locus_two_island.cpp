@@ -92,7 +92,8 @@ int props_to_index(int s, int a, int b, int p)  {
 SEXP construct_twolocus_island_graph(int sample_size, 
                                      double N1, double N2, 
                                      double M1, double M2, 
-                                     double R) {
+                                     double R,
+                                     bool epoques=0) {
 // SEXP construct_twolocus_island_graph(int sample_size, double N, double M, double R, bool keep_null_edges=false) {
     
      // number of populations
@@ -101,8 +102,8 @@ SEXP construct_twolocus_island_graph(int sample_size,
     const int state_length = nr_populations * pow((sample_size+1), 2);
     const size_t state_size = sizeof(int) * state_length;
 
-    struct ptd_graph *graph = ptd_graph_create((size_t) state_length);
-    struct ptd_avl_tree *avl_tree = ptd_avl_tree_create((size_t) state_length);
+    struct ptd_graph *graph = ptd_graph_create((size_t) state_length + ((int) epoques));  // plus one to make room for the epoque label
+    struct ptd_avl_tree *avl_tree = ptd_avl_tree_create((size_t) state_length + ((int) epoques));  // plus one to make room for the epoque label
 
     int *initial_state = (int *) calloc((size_t) state_length, sizeof(int));
     
@@ -144,6 +145,9 @@ SEXP construct_twolocus_island_graph(int sample_size,
                     continue;
                 }
                 
+//                double edge_state[] = {0, 0, 0, 0, 0}; // N1, N2, M1, M2, R
+                double *edge_state = (double *) calloc(5, sizeof(double));
+                for (int i = 0; i < 5; i++) edge_state[i] = 0; // N1, N2, M1, M2, R
 
                 double rate;
                 if (i == j) {
@@ -152,8 +156,10 @@ SEXP construct_twolocus_island_graph(int sample_size,
                     }
                     if (props_i.population == 1) {
                         rate = state[i] * (state[i] - 1) / 2 / N1;
+                        edge_state[0] = state[i] * (state[i] - 1) / 2;
                     } else {
                         rate = state[i] * (state[i] - 1) / 2 / N2;
+                        edge_state[1] = state[i] * (state[i] - 1) / 2;                        
                     }
                 } else {
                     if (state[i] < 1 || state[j] < 1) {
@@ -161,8 +167,10 @@ SEXP construct_twolocus_island_graph(int sample_size,
                     }
                     if (props_i.population == 1) {
                         rate = state[i] * state[j] / N1;
+                        edge_state[0] = state[i] * state[j];                        
                     } else {
                         rate = state[i] * state[j] / N2;
+                        edge_state[1] = state[i] * state[j];                                                    
                     }
                 }
          
@@ -179,25 +187,27 @@ SEXP construct_twolocus_island_graph(int sample_size,
                 struct ptd_vertex *child_vertex = ptd_find_or_create_vertex(
                                 graph, avl_tree, child_state
                        );
-                ptd_graph_add_edge(vertex, child_vertex, rate); 
-                // double *edge_state = (double *) calloc((size_t) 3, sizeof(double));
-                // edge_state[0] = rate;                
-                // ptd_graph_add_edge_parameterized(vertex, child_vertex, rate, edge_state);                        
+                // ptd_graph_add_edge(vertex, child_vertex, rate); 
+                ptd_graph_add_edge_parameterized(vertex, child_vertex, rate, edge_state);                        
             }
             // migration
             // if (state[i] > 0 && (M > 0 || keep_null_edges)) { // M > 0 to not make zero nonsensical zero weight edges (disable if parameterized)
             if (state[i] > 0 && (M1 > 0 || M2 > 0)) { // M > 0 to not make zero nonsensical zero weight edges (disable if parameterized)
-      
+
                 double rate;
+                double *edge_state = (double *) calloc(5, sizeof(double));
+                for (int i = 0; i < 5; i++) edge_state[i] = 0; // N1, N2, M1, M2, R
                 memcpy(child_state, state, state_size);
 
                 int m;
                 if (props_i.population == 1) {
                     m = 2;
                     rate = state[i] * M1;
+                    edge_state[2] = state[i];
                 } else {
                     m = 1;
                     rate = state[i] * M2;
+                    edge_state[3] = state[i];                        
                 }
 
                 int k = _props_to_index(sample_size, props_i.locus1, props_i.locus2, m);
@@ -207,10 +217,8 @@ SEXP construct_twolocus_island_graph(int sample_size,
                 struct ptd_vertex *child_vertex = ptd_find_or_create_vertex(
                                 graph, avl_tree, child_state
                        );
-                ptd_graph_add_edge(vertex, child_vertex, rate); 
-                // double *edge_state = (double *) calloc((size_t) 3, sizeof(double));
-                // edge_state[1] = rate;                
-                // ptd_graph_add_edge_parameterized(vertex, child_vertex, rate, edge_state);  
+                // ptd_graph_add_edge(vertex, child_vertex, rate); 
+                ptd_graph_add_edge_parameterized(vertex, child_vertex, rate, edge_state);  
             }  
             // recombination
             // if (state[i] > 0 && props_i.locus1 > 0 && props_i.locus2 > 0 && (R > 0 || keep_null_edges)) { // R > 0 to not make zero nonsensical zero weight edges (disable if parameterized)
@@ -219,6 +227,10 @@ SEXP construct_twolocus_island_graph(int sample_size,
 
       
                 double rate = R;
+                double *edge_state = (double *) calloc(5, sizeof(double));
+                for (int i = 0; i < 5; i++) edge_state[i] = 0; // N1, N2, M1, M2, R
+                edge_state[4] = 1;
+                
                 memcpy(child_state, state, state_size);
 
                 // a lineage with index i recombines to produce lineages with index k and l
@@ -238,10 +250,8 @@ SEXP construct_twolocus_island_graph(int sample_size,
                 struct ptd_vertex *child_vertex = ptd_find_or_create_vertex(
                                 graph, avl_tree, child_state
                        );
-                ptd_graph_add_edge(vertex, child_vertex, rate); 
-                // double *edge_state = (double *) calloc((size_t) 3, sizeof(double));
-                // edge_state[2] = rate;                
-                // ptd_graph_add_edge_parameterized(vertex, child_vertex, rate, edge_state);             
+                // ptd_graph_add_edge(vertex, child_vertex, rate); 
+                ptd_graph_add_edge_parameterized(vertex, child_vertex, rate, edge_state);             
             }             
         }
     }
