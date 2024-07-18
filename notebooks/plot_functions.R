@@ -12,7 +12,8 @@ despine <- theme(panel.border = element_blank(), panel.grid.major = element_blan
 #                 text=element_text(family="Arial"))
 
 plot_sfs <- function(graph, rewards) {
-    sfs <- sapply(1:(dim(rewards)[1]-1), function(i) expectation(graph, rewards[i,]))
+    # sfs <- sapply(1:(dim(rewards)[1]-1), function(i) expectation(graph, rewards[i,]))
+    sfs <- sapply(1:dim(rewards)[2], function(i) expectation(graph, rewards[,i]))                  
     # sfs <- apply(rewards, 1, function(x) expectation(graph, x))                  
     data.frame(
       ton=seq(1,length(sfs)),  

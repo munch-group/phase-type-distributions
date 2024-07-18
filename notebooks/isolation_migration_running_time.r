@@ -6,7 +6,7 @@ devtools::install_github("TobiasRoikjer/PtDAlgorithms")
 library(ptdalgorithms)
 
 
-Rcpp::sourceCpp("./isolation_migration.cpp")
+Rcpp::sourceCpp("./cpp/isolation_migration.cpp")
 
 
 im_expectation <- function(n1, n2, m1, m2, split_t) {

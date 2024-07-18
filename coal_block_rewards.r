@@ -2,7 +2,7 @@
 library(devtools)
 library(ptdalgorithms)
 library(rhdf5)
-
+library("partitions")
 
 block_coalescent <- function(n) {
       
@@ -29,7 +29,6 @@ block_coalescent <- function(n) {
     return(graph)
 }
 
-library("partitions")
 
 # equivalence_classes <- function(n) {
 #     p <- parts(n)
@@ -85,17 +84,38 @@ get_block_rewards <- function(n, l) {
 }
 
 args = commandArgs(trailingOnly=TRUE)
-hdf5_file_name <- as.numeric(args[1])
+hdf5_file_name <- args[1]
 sample_size <- as.numeric(args[2])
-
 reward_fun <- get_block_rewards
-h5f <- H5Fopen(hdf5_file_name)
-
-name <- paste("coalescent/", sample_size, sep="")
 graph <- block_coalescent(sample_size)
 tensor_dims <- c(sample_size, vertices_length(graph))    
 reward_list <- lapply(1:vertices_length(graph), function(i) do.call(reward_fun, as.list(c(sample_size, vertex_at(graph, i)$state))))
 rewards <- array(unlist(reward_list), dim=tensor_dims)
-h5write(rewards, h5f, name=paste("coalescent/", sample_size, sep=""))
-H5Fclose(h5f)
+if (!file.exists(hdf5_file_name)) {
+    h5createFile(hdf5_file_name)
+    h5createGroup(hdf5_file_name, "coalescent")
+}
+name <- paste("coalescent/", sample_size, sep="")
+
+for (i in 1:10) {
+    tryCatch(
+        {
+        h5f <- H5Fopen(hdf5_file_name)
+        h5write(rewards, h5f, name=paste("coalescent/", sample_size, sep=""))
+        },
+        error=function(e) {
+            message('Error - retrying in 10')
+            print(e)
+            Sys.sleep(10)
+            next
+        },
+        finally = {
+            H5Fclose(h5f)
+            break
+        }
+    )
+}
+
+
+
                           
