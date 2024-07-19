@@ -6,7 +6,7 @@
  * The path is currently ../ as we are in the same repository. This path
  * should be something like [full or relative path to cloned code]/api...
  */
-#include "./../../PtDAlgorithms/api/c/ptdalgorithms.h"
+#include "./../../../PtDAlgorithms/api/c/ptdalgorithms.h"
 
 /*
 * Including a .c file is very strange usually!
@@ -14,8 +14,8 @@
 * you would usually expect. Therefore this is by far
 * the easiest way of importing the code.
 */
-#include "./../../PtDAlgorithms/api/cpp/ptdalgorithmscpp.h"
-#include "./../../PtDAlgorithms/src/c/ptdalgorithms.c"
+#include "./../../../PtDAlgorithms/api/cpp/ptdalgorithmscpp.h"
+#include "./../../../PtDAlgorithms/src/c/ptdalgorithms.c"
 
 /* This is the binding layer such that R can invoke this function */
 #include <Rcpp.h> 

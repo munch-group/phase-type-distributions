@@ -6,10 +6,10 @@
 #include "assert.h"
 #include "math.h"
 
-#include "./../../PtDAlgorithms/api/c/ptdalgorithms.h"
-#include "./../../PtDAlgorithms/api/cpp/ptdalgorithmscpp.h"
+#include "./../../../PtDAlgorithms/api/c/ptdalgorithms.h"
+#include "./../../../PtDAlgorithms/api/cpp/ptdalgorithmscpp.h"
 
-#include "./../../PtDAlgorithms/src/c/ptdalgorithms.c"
+#include "./../../../PtDAlgorithms/src/c/ptdalgorithms.c"
 
 #include<stdio.h> 
 #include<sys/stat.h>
