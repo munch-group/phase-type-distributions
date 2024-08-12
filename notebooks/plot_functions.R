@@ -131,10 +131,9 @@ plot_sim <- function(graph)
               text=element_text(size=17))
 }
 
-
 plot_graph <- function(gam, constrained=TRUE, 
                        subgraphs=FALSE, ranksep=2, nodesep=1,
-                       subgraphfun=function(state) paste(state[-length(state)], collapse=""), 
+                       subgraphfun=function(state, index) paste(state[-length(state)], collapse=""), 
                        size=c(6, 6), fontsize=10, rankdir="LR", align=FALSE, nodecolor='white', rainbow=FALSE, penwidth=1) {
 
 
@@ -156,12 +155,6 @@ plot_graph <- function(gam, constrained=TRUE,
         }
     }
 
-    # subgraphfun <- function(state) as.character(state[length(state)])
-
-    # subgraphfun <- function(state) paste(state[length(state)], collapse="")
-    # subgraphfun <- function(state) paste(state[-length(state)], collapse="")
-
-    # sub_graph <- function(state) as.character(state[-length(state)])
     sub_graphs = list()
     state_classes = list()
     
@@ -171,9 +164,16 @@ plot_graph <- function(gam, constrained=TRUE,
         constrained <- 'false'
     }
 
+    states <- c()
+    for (i in 1:(nrow(gam$states))) {
+        states <- c(states, paste0(i, ' [label="', paste(gam$states[i,], collapse = ","), '"];'))
+    }
+    
     edge_templ <- '"FROM" -> "TO" [constraint=true, label="LABEL",labelfloat=false,color="COLOR",fontcolor="COLOR"];'
+
     subgraph_template <- '
     subgraph cluster_FREQBIN {
+        rank=same;
         style=filled;
         color=whitesmoke;
         node [style=filled];
@@ -189,7 +189,7 @@ plot_graph <- function(gam, constrained=TRUE,
         if (gam$IPV[i] > 0) {
             edge <- edge_templ
             edge <- sub('FROM', start_name, edge)
-            edge <- sub('TO', paste(gam$states[i,], collapse = ","), edge)
+            edge <- sub('TO', i, edge)
             edge <- sub('LABEL', gam$IPV[i], edge)
             edge <- gsub('COLOR', random_color(), edge)                        
             edges <- c(edges, edge)
@@ -200,8 +200,8 @@ plot_graph <- function(gam, constrained=TRUE,
         for (j in 1:nrow(gam$states)) {
             if ((i != j) && (gam$SIM[i, j] > 0)) {
                 edge <- edge_templ
-                edge <- sub('FROM', paste(gam$states[i,], collapse = ","), edge)
-                edge <- sub('TO', paste(gam$states[j,], collapse = ","), edge)
+                edge <- sub('FROM', i, edge)
+                edge <- sub('TO', j, edge)
                 edge <- sub('LABEL', format_rate(gam$SIM[i, j]), edge)
                 edge <- gsub('COLOR', random_color(), edge)
                 edges <- c(edges, edge)
@@ -215,10 +215,8 @@ plot_graph <- function(gam, constrained=TRUE,
         # TODO: Avoid the hack below by changing the function to use the graph instead of the matrix
         if (absorb_rates[i] > abs(1e-14)) {
         # if (absorb_rates[i] > 0) {
-        
-        # edges <- c(edges, paste('"', from, '"', ' -> ', 'Absorb', '[constraint=true, label="', label, '",labelfloat=false]', ';', sep='')) 
             edge <- edge_templ
-            edge <- sub('FROM', paste(gam$states[i,], collapse = ","), edge)
+            edge <- sub('FROM', i, edge)
             edge <- sub('TO', absorbing_name, edge)
             edge <- sub('LABEL', absorb_rates[i], edge)
             edge <- gsub('COLOR', random_color(), edge)            
@@ -226,14 +224,14 @@ plot_graph <- function(gam, constrained=TRUE,
         }
     }
 
-    graph_spec <- paste(edges, collapse = '\n')
+    graph_spec <- paste(c(states, edges), collapse = '\n')
 
     rank_same <- ''
 
     if (subgraphs) {        
         for (i in 1:(nrow(gam$states))) {
-            sg <- subgraphfun(gam$states[i,])
-            sub_graphs[[sg]] <- c(sub_graphs[[sg]], paste(gam$states[i,], collapse = ","))
+            sg <- subgraphfun(gam$states[i,], index=i)
+            sub_graphs[[sg]] <- c(sub_graphs[[sg]], i)
         }
         for (sg in labels(sub_graphs)) {
             
@@ -253,7 +251,7 @@ plot_graph <- function(gam, constrained=TRUE,
         if (align) {
             for (i in 1:(nrow(gam$states))) {
                 sc <- paste(head(gam$states[i,], -1), collapse = ",")
-                state_classes[[sc]] <- c(state_classes[[sc]], paste(gam$states[i,], collapse = ","))
+                state_classes[[sc]] <- c(state_classes[[sc]], i)
             }
             for (sc in labels(state_classes)) {
                 rank_same <- paste(rank_same, '{rank=same; ', sep='')
@@ -267,16 +265,6 @@ plot_graph <- function(gam, constrained=TRUE,
     
     }
 
-#     style_str <- '
-#         rankdir=RANKDIR;
-#         size="SIZEX,SIZEY";
-#         fontname="Helvetica,Arial,sans-serif"
-#     	node [fontname="Helvetica,Arial,sans-serif", fontsize=FONTSIZE]
-#     	edge [fontname="Helvetica,Arial,sans-serif", fontsize=FONTSIZE]
-#         Absorb [style=filled,color="lightgrey"]
-#         IPV [style=filled,color="lightgrey"]
-#     '
-    
     style_str <- '
         graph [compound=true newrank=true pad="0.5", ranksep="RANKSEP", nodesep="NODESEP"] 
         rankdir=RANKDIR;
@@ -300,67 +288,5 @@ plot_graph <- function(gam, constrained=TRUE,
     graph_string <- gsub('PENWIDTH', penwidth, graph_string)  
     system("dot -Tsvg -o tmp.svg", input=graph_string, intern=TRUE)
     return(display_svg(file="tmp.svg"))
-    }
-                  
-
-# plot_graph <- function(gam, constrained=TRUE, size=c(6, 6), fontsize=10, rankdir="LR") {
-
-#     if (constrained) {
-#         constrained <- 'true'
-#     } else {
-#         constrained <- 'false'
-#     }
-
-#     edge_templ <- '"FROM" -> "TO" [constraint=true, label="LABEL",labelfloat=false];'
-#     start_name <- 'IPV'
-#     absorbing_name <- 'Absorb'
-#     edges <- c()
-#     for (i in 1:length(gam$IPV)) {
-#         if (gam$IPV[i] > 0) {
-#             edge <- edge_templ
-#             edge <- sub('FROM', start_name, edge)
-#             edge <- sub('TO', paste(gam$states[i,], collapse = ","), edge)
-#             edge <- sub('LABEL', gam$SIM[i, 1], edge)
-#             edges <- c(edges, edge)
-#         }
-#     }    
-#     for (i in 1:nrow(gam$states)) {
-#         for (j in 1:nrow(gam$states)) {
-#             if ((i != j) && (gam$SIM[i, j] > 0)) {
-#                 edge <- edge_templ
-#                 edge <- sub('FROM', paste(gam$states[i,], collapse = ","), edge)
-#                 edge <- sub('TO', paste(gam$states[j,], collapse = ","), edge)
-#                 edge <- sub('LABEL', gam$SIM[i, j], edge)
-#                 edges <- c(edges, edge)
-#             }
-#         }
-#     }
-#     absorb_rates <- -rowSums(gam$SIM)
-#     for (i in 1:nrow(gam$states)) {
-#         if (absorb_rates[i] > 0) {
-#             # edges <- c(edges, paste('"', from, '"', ' -> ', 'Absorb', '[constraint=true, label="', label, '",labelfloat=false]', ';', sep='')) 
-#             edge <- edge_templ
-#             edge <- sub('FROM', paste(gam$states[i,], collapse = ","), edge)
-#             edge <- sub('TO', absorbing_name, edge)
-#             edge <- sub('LABEL', absorb_rates[i], edge)
-#             edges <- c(edges, edge)
-#         }
-#     }
-#     graph_spec <- paste(edges, sep='\n', collapse = '')
-#     style_str <- '
-#         rankdir=RANKDIR;
-#         size="SIZEX,SIZEY";
-#         fontname="Helvetica,Arial,sans-serif"
-#     	node [fontname="Helvetica,Arial,sans-serif", fontsize=FONTSIZE]
-#     	edge [fontname="Helvetica,Arial,sans-serif", fontsize=FONTSIZE]
-#         Absorb [style=filled,color="lightgrey"]
-#         IPV [style=filled,color="lightgrey"]
-#     '
-#     style_str <- sub('SIZEX', size[1], style_str)
-#     style_str <- sub('SIZEY', size[2], style_str)
-#     style_str <- gsub('FONTSIZE', fontsize, style_str)    
-#     style_str <- gsub('RANKDIR', rankdir, style_str)    
-#     graph_string <- paste('digraph G {', style_str, graph_spec, '}', sep='\n')
-#     system("dot -Tsvg -o tmp.svg", input=graph_string, intern=TRUE)
-#     return(display_svg(file="tmp.svg"))
-#     }
+}
+   
