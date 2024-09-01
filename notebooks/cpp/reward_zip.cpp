@@ -42,13 +42,50 @@ SEXP reward_zip(SEXP graph, Function callback_fun) {
     for (size_t i=0; i < ptd_graph->vertices_length; ++i) vertex_probs[0] = 0;
     vertex_probs[0] = 1;
 
-    
     // get state vector size for bl_graph
     IntegerVector vec;
     for (size_t i=0; i < state_vector_length; ++i) vec.push_back(ptd_graph->vertices[0]->state[i]);     
     IntegerVector bl_vec = callback_fun(vec);
     int bl_state_vector_length = bl_vec.size();
   
+
+// THIS ONLY WORKS ON THE DAG... 
+// MAYBE THIS ALGORITHM COULD BE SOMEHOW STORED AS INSTRUCTIONS DOWNSTREAM OF THE DAG CREATION IF THE USER SPECIFIES A CALLBACK?
+
+// Make a function collapse_transform(graph, callback) like reward_transform(graph, rewards) PRODUCE A NEW GRAPH using REWARDS 
+
+
+// if the graph is acyclic, I can just collapsed and run expectation on the collapsed graph
+// if the graph is cyclic, I need to first make the DAG before I can collapse, so there is not getting around the O(n^3) step
+
+// ... unless I can collapse everything but the strongly connected components of a cyclic
+// find the strongly connectec components and treat them as "vertices". If that graph is acyclic, I can collapse that
+
+// or maybe, I can somehow get around not knowing the vector_probs, if I track how they are visited when collapsing the graph?...
+    
+//////////////////////////////////
+    
+    // int **state_mapping = (int **) calloc(ptd_graph->vertices_length, sizeof(int *));
+    
+    // for (size_t i=0; i < ptd_graph->vertices_length; ++i) {
+        
+    //     struct ptd_vertex *vertex = ptd_graph->vertices[i];
+    //     if (i == 0) {
+    //         IntegerVector vec(bl_state_vector_length); // zeros
+    //     } else {                
+    //         IntegerVector vec;
+    //         for (size_t k=0; k < state_vector_length; ++k)
+    //             vec.push_back(vertex->state[k]);     
+    //         IntegerVector bl_vec = callback_fun(vec);
+    //     }
+    //     int *mapped_state = (int *) calloc(bl_state_vector_length, sizeof(int));
+    //     std::copy(bl_vec.begin(), bl_vec.end(), mapped_state);            
+    //     state_mapping[i] = mapped_state;
+    
+    // }
+
+/////////////////////////////////
+
     // create bl_graph
     struct ptd_graph *bl_ptd_graph = ptd_graph_create(bl_state_vector_length);
     struct ptd_avl_tree *bl_avl_tree = ptd_avl_tree_create(bl_state_vector_length);
@@ -74,14 +111,18 @@ SEXP reward_zip(SEXP graph, Function callback_fun) {
         struct ptd_vertex *bl_vertex;
         if (i == 0) {
             bl_vertex = bl_ptd_graph->vertices[0];
-        } else {                
+        } else {
+            ////////////////////////////
             IntegerVector vec;
             for (size_t k=0; k < state_vector_length; ++k)
                 vec.push_back(vertex->state[k]);     
             IntegerVector bl_vec = callback_fun(vec);
             // int* bl_state = &bl_vec[0];
             std::copy(bl_vec.begin(), bl_vec.end(), bl_state);
-            
+            ////////////////////////////            
+            // int *bl_state = state_mapping[vertex->index];           
+            ////////////////////////////
+
             bl_vertex = ptd_find_or_create_vertex(bl_ptd_graph, bl_avl_tree, bl_state);
         }
 
@@ -100,13 +141,16 @@ SEXP reward_zip(SEXP graph, Function callback_fun) {
             vertex_probs[vertex->edges[j]->to->index] += vertex_probs[i] * vertex->edges[j]->weight / tot_edge_weight;
 
             // get bl_child_state
+            ////////////////////////////
             IntegerVector child_vec;
             for (size_t k=0; k < state_vector_length; ++k)
                 child_vec.push_back(child_state[k]);
             IntegerVector bl_child_vec = callback_fun(child_vec);
             // int* bl_child_state = &bl_child_vec[0];
             std::copy(bl_child_vec.begin(), bl_child_vec.end(), bl_child_state);
-
+            ////////////////////////////            
+            // bl_child_state = state_mapping[vertex->edges[j]->to->index];           
+            ////////////////////////////
 
             // get bl_child_vertex
             struct ptd_vertex *bl_child_vertex = ptd_find_or_create_vertex(bl_ptd_graph, bl_avl_tree, bl_child_state);
