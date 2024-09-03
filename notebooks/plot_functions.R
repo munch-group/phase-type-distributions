@@ -131,8 +131,9 @@ plot_sim <- function(graph)
               text=element_text(size=17))
 }
 
-plot_graph <- function(gam, constrained=TRUE, 
-                       subgraphs=FALSE, ranksep=2, nodesep=1,
+plot_graph <- function(gam, 
+                       constraint=TRUE,
+                       subgraphs=FALSE, ranksep=2, nodesep=1, splines=TRUE,
                        subgraphfun=function(state, index) paste(state[-length(state)], collapse=""), 
                        size=c(6, 6), fontsize=10, rankdir="LR", align=FALSE, nodecolor='white', rainbow=FALSE, penwidth=1) {
 
@@ -158,10 +159,17 @@ plot_graph <- function(gam, constrained=TRUE,
     sub_graphs = list()
     state_classes = list()
     
-    if (constrained) {
-        constrained <- 'true'
+    if (constraint) {
+        constraint <- 'true'
     } else {
-        constrained <- 'false'
+        constraint <- 'false'
+    }
+    
+    if (splines == TRUE) {
+        splines <- 'true'
+    } 
+    if (splines == FALSE) {
+        splines <- 'false'
     }
 
     states <- c()
@@ -169,8 +177,11 @@ plot_graph <- function(gam, constrained=TRUE,
         states <- c(states, paste0(i, ' [label="', paste(gam$states[i,], collapse = ","), '"];'))
     }
     
-    edge_templ <- '"FROM" -> "TO" [constraint=true, label="LABEL",labelfloat=false,color="COLOR",fontcolor="COLOR"];'
+    # edge_templ <- '"FROM" -> "TO" [constraint=CONSTRAINT, label="LABEL", labelfloat=false, color="COLOR", fontcolor="COLOR"];'
+    edge_templ <- '"FROM" -> "TO" [constraint=CONSTRAINT, xlabel="LABEL", labelfloat=false, color="COLOR", fontcolor="COLOR"];'
 
+    # , label2node=true labelOverlay="75%"
+    
     subgraph_template <- '
     subgraph cluster_FREQBIN {
         rank=same;
@@ -267,7 +278,9 @@ plot_graph <- function(gam, constrained=TRUE,
 
     style_str <- '
         graph [compound=true newrank=true pad="0.5", ranksep="RANKSEP", nodesep="NODESEP"] 
+        bgcolor=transparent;
         rankdir=RANKDIR;
+        splines=SPLINES;
         size="SIZEX,SIZEY";
         fontname="Helvetica,Arial,sans-serif"
     	node [fontname="Helvetica,Arial,sans-serif", fontsize=FONTSIZE, style=filled, fillcolor="NODECOLOR"]
@@ -280,12 +293,16 @@ plot_graph <- function(gam, constrained=TRUE,
     style_str <- sub('SIZEY', size[2], style_str)
     style_str <- gsub('FONTSIZE', fontsize, style_str)    
     style_str <- gsub('RANKDIR', rankdir, style_str)    
+    style_str <- gsub('SPLINES', splines, style_str)    
     style_str <- gsub('RANKSAME', rank_same, style_str)
     style_str <- gsub('RANKSEP', ranksep, style_str)
     style_str <- gsub('NODESEP', nodesep, style_str)
+    
     graph_string <- paste('digraph G {', style_str, graph_spec, '}', sep='\n')
     graph_string <- gsub('NODECOLOR', nodecolor, graph_string)  
     graph_string <- gsub('PENWIDTH', penwidth, graph_string)  
+    graph_string <- gsub('CONSTRAINT', constraint, graph_string)    
+    
     system("dot -Tsvg -o tmp.svg", input=graph_string, intern=TRUE)
     return(display_svg(file="tmp.svg"))
 }
