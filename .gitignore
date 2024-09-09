@@ -131,3 +131,5 @@ dmypy.json
 **/.DS_Store
 **/.virtual_documents/
 **/.vscode/
+
+notebooks/tmp.svg
