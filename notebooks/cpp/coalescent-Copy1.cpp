@@ -338,6 +338,14 @@ SEXP construct_coalescent_selection_graph(int sample_size, int n_derived, int po
     const int state_length = (sample_size + 1) * 2 + 1;
     const size_t state_size = sizeof(int) * state_length;
     
+    // int state_length ;
+    // if (n_derived == 0) {
+    //     state_length = (sample_size + 1) + 1;
+    // } else {
+    //     state_length = (sample_size + 1) * 2 + 1;
+    // }
+    // const size_t state_size = sizeof(int) * state_length; 
+    
     int bin_index = state_length - 1;
     
     double der_freq = n_derived / (double)sample_size;

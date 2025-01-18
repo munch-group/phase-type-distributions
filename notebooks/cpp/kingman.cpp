@@ -30,6 +30,9 @@ using namespace Rcpp;
 
 // [[Rcpp::export]]
 SEXP generate_kingman_graph(int n, int m) {
+// SEXP generate_kingman_graph(int m) {
+//   int n = m;
+
   m--;
   struct ptd_graph *kingman_graph = ptd_graph_create(m + 1);
   struct ptd_avl_tree *avl_tree = ptd_avl_tree_create(m + 1);

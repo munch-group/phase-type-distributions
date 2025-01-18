@@ -3,6 +3,7 @@ library(devtools)
 library(ptdalgorithms)
 library(rhdf5)
 library("partitions")
+library("partitions")
 
 block_coalescent <- function(n) {
       
@@ -84,6 +85,7 @@ get_block_rewards <- function(n, l) {
 }
 
 args = commandArgs(trailingOnly=TRUE)
+hdf5_file_name <- args[1]
 hdf5_file_name <- args[1]
 sample_size <- as.numeric(args[2])
 reward_fun <- get_block_rewards
